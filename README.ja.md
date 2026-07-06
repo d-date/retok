@@ -1,10 +1,4 @@
-<<<<<<< Updated upstream
 # retok (Return-of-Token)
-||||||| Stash base
-# return-of-token (retok)
-=======
-# retok
->>>>>>> Stashed changes
 
 ![retok — token-efficient AI coding](docs/ogp.png)
 
