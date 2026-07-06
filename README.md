@@ -1,4 +1,4 @@
-# return-of-token (retok)
+# retok(return-of-token)
 
 ![retok — token-efficient AI coding](docs/ogp.png)
 
@@ -32,8 +32,8 @@ Runs on Python 3 with the standard library only — no dependencies.
 Requires Python 3.7+. No dependencies.
 
 ```sh
-git clone https://github.com/d-date/return-of-token.git
-cd return-of-token
+git clone https://github.com/d-date/retok.git
+cd retok
 ./retok
 ```
 
