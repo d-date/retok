@@ -1,5 +1,7 @@
 # return-of-token (retok)
 
+![retok — token-efficient AI coding](docs/ogp.png)
+
 **English** | [日本語](README.ja.md)
 
 A CLI tool that analyzes your AI coding agent usage logs — **Claude Code** and **OpenAI Codex CLI** — to measure **token efficiency**, estimate cost, and print actionable recommendations.

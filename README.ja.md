@@ -1,5 +1,7 @@
 # return-of-token (retok)
 
+![retok — token-efficient AI coding](docs/ogp.png)
+
 [English](README.md) | **日本語**
 
 AIコーディングエージェント（**Claude Code** と **OpenAI Codex CLI**）の利用ログを解析し、**Token対効果**を測定・分析して改善アドバイスを表示するCLIツール。
