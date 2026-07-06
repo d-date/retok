@@ -47,7 +47,7 @@ retok
 Alternatively, grab just the script — everything works, but the report falls back to English because `locales/` is not present:
 
 ```sh
-curl -fsSLo ~/.local/bin/retok https://raw.githubusercontent.com/d-date/return-of-token/main/retok
+curl -fsSLo ~/.local/bin/retok https://raw.githubusercontent.com/d-date/retok/main/retok
 chmod +x ~/.local/bin/retok
 ```
 
