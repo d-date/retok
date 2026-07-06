@@ -25,6 +25,30 @@ Runs on Python 3 with the standard library only — no dependencies.
     hour) re-caches the entire context at twice the input rate. ...
 ```
 
+## Installation
+
+Requires Python 3.7+. No dependencies.
+
+```sh
+git clone https://github.com/d-date/return-of-token.git
+cd return-of-token
+./retok
+```
+
+To run it from anywhere, symlink it into your `PATH` (the symlink is resolved, so translations in `locales/` keep working):
+
+```sh
+ln -s "$(pwd)/retok" ~/.local/bin/retok   # or /usr/local/bin/retok
+retok
+```
+
+Alternatively, grab just the script — everything works, but the report falls back to English because `locales/` is not present:
+
+```sh
+curl -fsSLo ~/.local/bin/retok https://raw.githubusercontent.com/d-date/return-of-token/main/retok
+chmod +x ~/.local/bin/retok
+```
+
 ## Usage
 
 ```sh

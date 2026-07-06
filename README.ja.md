@@ -6,6 +6,30 @@ AIコーディングエージェント（**Claude Code** と **OpenAI Codex CLI*
 
 Python 3 標準ライブラリのみで動作します（依存パッケージなし）。
 
+## インストール
+
+Python 3.7以上が必要です。依存パッケージはありません。
+
+```sh
+git clone https://github.com/d-date/return-of-token.git
+cd return-of-token
+./retok
+```
+
+どこからでも実行したい場合は `PATH` の通った場所にシンボリックリンクを張ってください（リンクは実体解決されるため `locales/` の翻訳もそのまま使えます）:
+
+```sh
+ln -s "$(pwd)/retok" ~/.local/bin/retok   # または /usr/local/bin/retok
+retok
+```
+
+スクリプト単体を取得することもできます。動作はしますが、`locales/` が無いためレポートは英語にフォールバックします:
+
+```sh
+curl -fsSLo ~/.local/bin/retok https://raw.githubusercontent.com/d-date/return-of-token/main/retok
+chmod +x ~/.local/bin/retok
+```
+
 ## 使い方
 
 ```sh
