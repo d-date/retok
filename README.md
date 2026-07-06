@@ -33,10 +33,10 @@ Runs on Python 3 with the standard library only — no dependencies.
 ./retok --lang en          # report language (default: $LANG)
 ./retok --json             # JSON output for other tools
 ./retok --top 20           # rows in ranking tables
-./retok --dirs ~/.claude/projects   # override scan roots
+./retok --dirs ~/somewhere/projects # override scan roots
 ```
 
-By default it scans `~/.claude/projects` and `~/.claude-personal/projects`. Message IDs are deduplicated globally, so files mirrored across both roots are never double-counted.
+By default it scans `~/.claude/projects`, plus `$CLAUDE_CONFIG_DIR/projects` when that environment variable is set. If you keep transcripts elsewhere (multiple profiles, custom config dirs), pass every root with `--dirs`. Message IDs are deduplicated globally, so overlapping roots are never double-counted.
 
 ## What it measures
 
