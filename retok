@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """retok — Return of Token
 
-Analyze Claude Code transcripts (~/.claude*/projects/**/*.jsonl) to measure
-token efficiency, estimate cost, and suggest improvements.
+Analyze AI coding agent transcripts — Claude Code (~/.claude/projects) and
+OpenAI Codex CLI (~/.codex/sessions) — to measure token efficiency, estimate
+cost, and suggest improvements.
 
 Usage:
-  retok [--days N] [--project NAME] [--top N] [--json] [--lang CODE] [--dirs DIR ...]
+  retok [--days N] [--project NAME] [--provider claude|codex] [--top N]
+        [--json] [--lang CODE] [--dirs DIR ...] [--codex-dirs DIR ...]
 """
 
 import argparse
@@ -18,8 +20,8 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-# Pricing per MTok (USD). Cache write: 1.25x (5m TTL) / 2x (1h TTL) of input.
-# Cache read: 0.1x of input. Source: platform.claude.com (2026-06).
+# Claude pricing per MTok (USD). Cache write: 1.25x (5m TTL) / 2x (1h TTL) of
+# input. Cache read: 0.1x of input. Source: platform.claude.com (2026-06).
 PRICING = {
     "fable":  {"input": 10.0, "output": 50.0},
     "mythos": {"input": 10.0, "output": 50.0},
@@ -30,6 +32,21 @@ PRICING = {
 CACHE_WRITE_5M = 1.25
 CACHE_WRITE_1H = 2.0
 CACHE_READ = 0.1
+
+# OpenAI (Codex) pricing per MTok (USD), longest-prefix match. Cached input:
+# 0.1x of input, no cache-write premium. Source: developers.openai.com (2026-07).
+OPENAI_PRICING = [
+    ("gpt-5.5",           {"input": 5.0,  "output": 30.0}),
+    ("gpt-5.4",           {"input": 2.5,  "output": 15.0}),
+    ("gpt-5.3",           {"input": 1.75, "output": 14.0}),
+    ("gpt-5.2",           {"input": 1.75, "output": 14.0}),
+    ("gpt-5.1-codex-max", {"input": 1.25, "output": 10.0}),
+    ("gpt-5.1",           {"input": 1.25, "output": 10.0}),
+    ("gpt-5-mini",        {"input": 0.25, "output": 2.0}),
+    ("gpt-5-nano",        {"input": 0.05, "output": 0.4}),
+    ("gpt-5",             {"input": 1.25, "output": 10.0}),
+]
+OPENAI_CACHE_READ = 0.1
 
 CACHE_TTL_SECONDS = 5 * 60  # ephemeral 5m cache TTL
 LARGE_CONTEXT_THRESHOLD = 120_000  # tokens; suggest /clear or /compact beyond this
@@ -46,8 +63,9 @@ C = {
 # locales/<tag>.json next to this script and override these keys.
 # ---------------------------------------------------------------------------
 EN = {
-    "title": "retok — Claude Code Token Efficiency Report (last {days} days / {files} files)",
+    "title": "retok — Token Efficiency Report (last {days} days / {files} files)",
     "overview": "Overview",
+    "provider_split": "Claude Code / Codex",
     "by_model": "By model",
     "by_project": "By project (top by cost)",
     "top_sessions": "Most expensive sessions",
@@ -189,6 +207,27 @@ def model_family(model_id):
     return None
 
 
+def openai_price(model_id):
+    if not model_id:
+        return None
+    for prefix, price in OPENAI_PRICING:
+        if model_id.startswith(prefix):
+            return price
+    return None
+
+
+def codex_cost(model_id, inp_total, cached, out):
+    """Cost of one Codex request. `cached` is a subset of `inp_total`."""
+    p = openai_price(model_id)
+    if p is None:
+        return 0.0
+    return (
+        (inp_total - cached) * p["input"]
+        + cached * p["input"] * OPENAI_CACHE_READ
+        + out * p["output"]
+    ) / 1_000_000
+
+
 def entry_cost(model_id, usage):
     fam = model_family(model_id)
     if fam is None:
@@ -265,6 +304,7 @@ def is_interruption(entry):
 
 def new_session():
     return {
+        "provider": None,
         "project": None,
         "first_ts": None,
         "last_ts": None,
@@ -285,7 +325,7 @@ def new_session():
     }
 
 
-def scan(dirs, since, project_filter):
+def scan(dirs, codex_dirs, since, project_filter, provider_filter):
     sessions = defaultdict(new_session)
     seen_msg_ids = set()
     daily = defaultdict(lambda: {"cost": 0.0, "output": 0})
@@ -297,12 +337,13 @@ def scan(dirs, since, project_filter):
     # Main transcripts: <project>/<session>.jsonl
     # Subagent transcripts: <project>/<session>/subagents/agent-*.jsonl
     jsonl_files = []
-    for d in dirs:
-        root = Path(d).expanduser()
-        if not root.is_dir():
-            continue
-        jsonl_files.extend((p, False) for p in root.glob("*/*.jsonl"))
-        jsonl_files.extend((p, True) for p in root.glob("*/*/subagents/*.jsonl"))
+    if provider_filter != "codex":
+        for d in dirs:
+            root = Path(d).expanduser()
+            if not root.is_dir():
+                continue
+            jsonl_files.extend((p, False) for p in root.glob("*/*.jsonl"))
+            jsonl_files.extend((p, True) for p in root.glob("*/*/subagents/*.jsonl"))
 
     since_epoch = since.timestamp()
     for path, is_subagent_file in jsonl_files:
@@ -334,6 +375,7 @@ def scan(dirs, since, project_filter):
                 else:
                     sid = entry.get("sessionId") or path.stem
                 s = sessions[sid]
+                s["provider"] = "claude"
                 if s["project"] is None:
                     cwd = entry.get("cwd")
                     s["project"] = Path(cwd).name if cwd else path.parent.name
@@ -437,12 +479,127 @@ def scan(dirs, since, project_filter):
                 m["cache_write"] += write
                 m["requests"] += 1
 
+    if provider_filter != "claude":
+        files_scanned += scan_codex(codex_dirs, since, sessions, seen_msg_ids,
+                                    daily, per_model)
+
     if project_filter:
         sessions = {k: v for k, v in sessions.items()
                     if v["project"] and project_filter.lower() in v["project"].lower()}
     # Drop sessions with no API traffic
     sessions = {k: v for k, v in sessions.items() if v["requests"] > 0}
     return sessions, daily, per_model, files_scanned
+
+
+def scan_codex(codex_dirs, since, sessions, seen_ids, daily, per_model):
+    """Scan OpenAI Codex CLI rollout files (~/.codex/sessions/YYYY/MM/DD/)."""
+    files_scanned = 0
+    since_epoch = since.timestamp()
+    for d in codex_dirs:
+        root = Path(d).expanduser()
+        if not root.is_dir():
+            continue
+        for path in root.glob("*/*/*/rollout-*.jsonl"):
+            try:
+                if path.stat().st_mtime < since_epoch:
+                    continue
+            except OSError:
+                continue
+            files_scanned += 1
+            try:
+                fh = open(path, encoding="utf-8")
+            except OSError:
+                continue
+            sid = path.stem
+            model = None
+            with fh:
+                for line in fh:
+                    try:
+                        entry = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    etype = entry.get("type")
+                    payload = entry.get("payload") or {}
+                    ts = parse_ts(entry.get("timestamp"))
+
+                    if etype == "session_meta":
+                        sid = payload.get("session_id") or sid
+                        s = sessions[sid]
+                        s["provider"] = "codex"
+                        cwd = payload.get("cwd")
+                        if cwd:
+                            s["project"] = Path(cwd).name
+                        continue
+
+                    if etype == "turn_context":
+                        model = payload.get("model") or model
+                        continue
+
+                    if ts is None or ts < since:
+                        continue
+                    s = sessions[sid]
+                    s["provider"] = "codex"
+                    if s["first_ts"] is None or ts < s["first_ts"]:
+                        s["first_ts"] = ts
+                    if s["last_ts"] is None or ts > s["last_ts"]:
+                        s["last_ts"] = ts
+
+                    ptype = payload.get("type")
+                    if etype == "event_msg" and ptype == "user_message":
+                        s["prompts"] += 1
+                        continue
+
+                    if etype == "response_item" and ptype == "function_call":
+                        name = payload.get("name", "?")
+                        s["tools"][name] += 1
+                        if name in ("exec_command", "shell", "local_shell"):
+                            try:
+                                cmd = json.loads(payload.get("arguments") or "{}").get("cmd", "")
+                            except (json.JSONDecodeError, AttributeError):
+                                cmd = ""
+                            if cmd:
+                                s["bash_commands"][str(cmd).strip()] += 1
+                        continue
+
+                    if etype != "event_msg" or ptype != "token_count":
+                        continue
+                    info = payload.get("info")
+                    if not info:
+                        continue  # rate-limit-only heartbeat
+                    last = info.get("last_token_usage") or {}
+                    inp_total = last.get("input_tokens", 0) or 0
+                    cached = last.get("cached_input_tokens", 0) or 0
+                    out = last.get("output_tokens", 0) or 0
+                    if inp_total + out == 0:
+                        continue
+                    # Resumed rollouts can replay history; dedupe on the
+                    # cumulative counter which is unique per request.
+                    total = (info.get("total_token_usage") or {}).get("total_tokens", 0)
+                    key = (sid, entry.get("timestamp"), total)
+                    if key in seen_ids:
+                        continue
+                    seen_ids.add(key)
+
+                    mdl = model or "gpt-5"
+                    cost = codex_cost(mdl, inp_total, cached, out)
+                    s["requests"] += 1
+                    s["input"] += inp_total - cached
+                    s["cache_read"] += cached
+                    s["output"] += out
+                    s["cost"] += cost
+                    s["models"].add(mdl)
+                    s["max_context"] = max(s["max_context"], inp_total)
+
+                    day = ts.astimezone().strftime("%Y-%m-%d")
+                    daily[day]["cost"] += cost
+                    daily[day]["output"] += out
+                    m = per_model[mdl]
+                    m["cost"] += cost
+                    m["input"] += inp_total - cached
+                    m["output"] += out
+                    m["cache_read"] += cached
+                    m["requests"] += 1
+    return files_scanned
 
 
 def build_advice(sessions, totals):
@@ -473,11 +630,13 @@ def build_advice(sessions, totals):
                         "max": worst // 1000}))
 
     # 4. Delegation: search-heavy main thread with little subagent use
-    main_tool_total = sum(sum(s["tools"].values()) for s in sessions.values())
+    #    (Claude only — Codex has no equivalent subagent transcripts)
+    claude_sessions = [s for s in sessions.values() if s["provider"] == "claude"]
+    main_tool_total = sum(sum(s["tools"].values()) for s in claude_sessions)
     search_calls = sum(sum(v for k, v in s["tools"].items() if k in SEARCH_TOOLS)
-                       for s in sessions.values())
+                       for s in claude_sessions)
     agent_calls = sum(s["tools"].get("Agent", 0) + s["tools"].get("Task", 0)
-                      for s in sessions.values())
+                      for s in claude_sessions)
     if (main_tool_total > 200 and search_calls / main_tool_total > 0.45
             and agent_calls < main_tool_total * 0.02):
         advice.append(("medium", "adv_delegate",
@@ -561,8 +720,14 @@ def render(sessions, daily, per_model, files_scanned, args, lang, msgs, use_colo
                  "detail": t(key + "_detail", **params)}
                 for sev, key, params in advice
             ],
+            "cost_by_provider": {
+                p: round(sum(s["cost"] for s in sessions.values()
+                             if s["provider"] == p), 4)
+                for p in sorted({s["provider"] for s in sessions.values()})
+            },
             "top_sessions": [
-                {"session": sid, "project": s["project"], "cost": round(s["cost"], 4),
+                {"session": sid, "provider": s["provider"],
+                 "project": s["project"], "cost": round(s["cost"], 4),
                  "prompts": s["prompts"], "max_context": s["max_context"],
                  "output_tokens": s["output"]}
                 for sid, s in sorted(sessions.items(), key=lambda kv: -kv[1]["cost"])[:args.top]
@@ -595,6 +760,13 @@ def render(sessions, daily, per_model, files_scanned, args, lang, msgs, use_colo
         (t("cost_per_prompt"), f"${cost_per_prompt:.3f}"),
         (t("subagent_cost"), side_str),
     ]
+    codex_cost_total = sum(s["cost"] for s in sessions.values()
+                           if s["provider"] == "codex")
+    if codex_cost_total:
+        claude_cost_total = totals["cost"] - codex_cost_total
+        rows.insert(1, (t("provider_split"),
+                        "${:,.2f} / ${:,.2f}".format(claude_cost_total,
+                                                     codex_cost_total)))
     label_w = max(dwidth(label) for label, _ in rows) + 3
     for label, value in rows:
         print(f"  {pad(label, label_w)}{c(value, 'bold')}")
@@ -669,22 +841,29 @@ def default_dirs():
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Claude Code token-efficiency report")
+    ap = argparse.ArgumentParser(
+        description="Token-efficiency report for AI coding agents "
+                    "(Claude Code, OpenAI Codex CLI)")
     ap.add_argument("--days", type=int, default=30, help="lookback window (default: 30)")
     ap.add_argument("--project", help="filter by project name substring")
+    ap.add_argument("--provider", choices=["claude", "codex"],
+                    help="only include one provider")
     ap.add_argument("--top", type=int, default=10, help="rows in ranking tables")
     ap.add_argument("--json", action="store_true", help="emit JSON instead of a report")
     ap.add_argument("--lang", help="report language (e.g. en, ja, zh-CN; default: $LANG)")
     ap.add_argument("--dirs", nargs="*", default=default_dirs(),
-                    help="transcript roots to scan "
+                    help="Claude Code transcript roots "
                          "(default: ~/.claude/projects and $CLAUDE_CONFIG_DIR/projects)")
+    ap.add_argument("--codex-dirs", nargs="*", default=["~/.codex/sessions"],
+                    help="Codex CLI session roots (default: ~/.codex/sessions)")
     args = ap.parse_args()
 
     lang = resolve_lang(args.lang)
     msgs = load_messages(lang)
 
     since = datetime.now(timezone.utc) - timedelta(days=args.days)
-    sessions, daily, per_model, files_scanned = scan(args.dirs, since, args.project)
+    sessions, daily, per_model, files_scanned = scan(
+        args.dirs, args.codex_dirs, since, args.project, args.provider)
     if not sessions:
         print(msgs.get("no_transcripts", EN["no_transcripts"]), file=sys.stderr)
         sys.exit(1)
