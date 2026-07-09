@@ -80,11 +80,12 @@ By default it scans Claude Code transcripts in `~/.claude/projects` (plus `$CLAU
 ## Recommendation rules
 
 - **Cache TTL expiry** — a large cache write (majority of the context) right after a gap longer than the write's TTL (1h/5m, detected from the usage buckets) means an expired prefix was re-cached from scratch. Suggests `/compact` / `/clear`
-- **Oversized contexts** — sessions exceeding 120k tokens. Suggests `/clear` between tasks
+- **Oversized contexts** — sessions exceeding 120k tokens, with at least 3 prompts in the session. Suggests `/clear` between tasks
 - **Under-delegation** — high Read/Grep/Glob share on the main thread with little subagent use
 - **Retry loops** — the same Bash command executed 5+ times within a session
-- **Frequent interruptions** — `[Request interrupted by user]` above 12% of prompts. Suggests clearer prompts and Plan Mode
-- **Premium models on tiny sessions** — one-shot Q&A on Opus/Fable-class models
+- **Frequent interruptions** — `[Request interrupted by user]` above 12% of prompts, only evaluated once the period has 30+ prompts. Suggests clearer prompts and Plan Mode
+- **Premium models on tiny sessions** — one-shot Q&A on Opus/Fable-class models, 10 or more such sessions in the period
+- **Premium-tier concentration** — a single model priced above the median (currently Fable/Mythos) accounts for 90%+ of total cost, once total cost reaches $50. Suggests delegating light work to a cheaper model
 
 ## Cost model
 
