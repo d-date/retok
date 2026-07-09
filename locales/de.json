@@ -32,6 +32,8 @@
   "adv_interrupt_detail": "Häufige Unterbrechungen sind ein Zeichen dafür, dass die Arbeit von Ihrer Absicht abdriftet. Nennen Sie im ersten Prompt Umfang, Nicht-Ziele und Fertigstellungskriterien, und nutzen Sie den Plan Mode für unsichere Aufgaben.",
   "adv_model_mix_title": "{count} Mini-Sitzungen auf Premium-Modellen (${cost})",
   "adv_model_mix_detail": "Einzelfragen und schnelle Checks sind mit Haiku oder Sonnet meist gut bedient. Wechseln Sie mit /model oder halten Sie ein separates Profil für leichte Aufgaben bereit.",
+  "adv_premium_share_title": "{model} macht {share} der Gesamtkosten aus (${cost})",
+  "adv_premium_share_detail": "Nahezu die gesamten Ausgaben laufen über ein einzelnes Modell der Premium-Preisklasse. Delegieren Sie leichte Aufgaben — Recherche, mechanische Änderungen, einmalige Prüfungen — an ein günstigeres Modell (z. B. Sonnet- oder Haiku-Subagenten) und heben Sie die Premium-Stufe für Aufgaben auf, die sie wirklich benötigen.",
   "adv_ok_title": "Keine größeren Ineffizienzen erkannt",
   "adv_ok_detail": "Cache-Trefferquote, Kontextgrößen und die Verteilung der Tool-Nutzung sehen gesund aus. Weiter so."
 }

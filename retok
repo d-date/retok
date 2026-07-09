@@ -129,6 +129,13 @@ EN = {
         "Sonnet. Switch with /model, or keep a separate profile for light "
         "tasks.",
 
+    "adv_premium_share_title": "{model} accounts for {share} of total cost (${cost})",
+    "adv_premium_share_detail":
+        "Nearly all spend goes through a single premium-tier model. Delegate "
+        "light work — research, mechanical edits, one-off checks — to a "
+        "cheaper model (e.g. Sonnet or Haiku subagents) and save the premium "
+        "tier for tasks that actually need it.",
+
     "adv_ok_title": "No major inefficiencies detected",
     "adv_ok_detail":
         "Cache hit rate, context sizes, and tool usage distribution all look "
@@ -609,7 +616,19 @@ def scan_codex(codex_dirs, since, sessions, seen_ids, daily, per_model, unknown_
     return files_scanned
 
 
-def build_advice(sessions, totals):
+def model_portfolio(per_model, total_cost):
+    """Per-model cost share and cache hit rate, for the model portfolio view."""
+    out = {}
+    for model, m in per_model.items():
+        denom = m["input"] + m["cache_read"] + m["cache_write"]
+        out[model] = {
+            "cost_share": m["cost"] / total_cost if total_cost else 0.0,
+            "cache_hit_rate": m["cache_read"] / denom if denom else 0.0,
+        }
+    return out
+
+
+def build_advice(sessions, totals, per_model):
     """Return [(severity, message_key_prefix, params_dict)] plus hit rate."""
     advice = []
 
@@ -679,6 +698,19 @@ def build_advice(sessions, totals):
         advice.append(("low", "adv_model_mix",
                        {"count": len(tiny_expensive), "cost": f"{waste:.2f}"}))
 
+    # 8. A single premium-tier model dominates the whole portfolio
+    if totals["cost"] >= 50:
+        median_price = sorted(p["input"] for p in PRICING.values())[len(PRICING) // 2]
+        portfolio = model_portfolio(per_model, totals["cost"])
+        for model, stats in sorted(portfolio.items(), key=lambda kv: -kv[1]["cost_share"]):
+            fam = model_family(model)
+            if (fam and PRICING[fam]["input"] > median_price
+                    and stats["cost_share"] >= 0.9):
+                advice.append(("low", "adv_premium_share",
+                               {"model": model, "share": f"{stats['cost_share']:.0%}",
+                                "cost": f"{totals['cost']:.2f}"}))
+                break
+
     if not advice:
         advice.append(("info", "adv_ok", {}))
     return advice, hit
@@ -711,7 +743,8 @@ def render(sessions, daily, per_model, unknown_models, files_scanned, args, lang
         "requests": sum(s["requests"] for s in sessions.values()),
         "sidechain_cost": sum(s["sidechain_cost"] for s in sessions.values()),
     }
-    advice, hit_rate = build_advice(sessions, totals)
+    advice, hit_rate = build_advice(sessions, totals, per_model)
+    portfolio = model_portfolio(per_model, totals["cost"])
 
     if args.json:
         out = {
@@ -719,7 +752,7 @@ def render(sessions, daily, per_model, unknown_models, files_scanned, args, lang
             "files_scanned": files_scanned,
             "totals": totals,
             "cache_hit_rate": hit_rate,
-            "per_model": {k: dict(v) for k, v in per_model.items()},
+            "per_model": {k: dict(v, **portfolio[k]) for k, v in per_model.items()},
             "unknown_models": dict(unknown_models),
             "daily": dict(sorted(daily.items())),
             "advice": [
@@ -779,15 +812,16 @@ def render(sessions, daily, per_model, unknown_models, files_scanned, args, lang
     for label, value in rows:
         print(f"  {pad(label, label_w)}{c(value, 'bold')}")
 
-    # ── By model ──
+    # ── By model (model portfolio: share of cost + per-model cache hit rate) ──
     print(c("\n■ " + t("by_model"), "bold"))
-    print(f"  {'model':<26}{'req':>6}{'in':>9}{'read':>9}{'write':>9}{'out':>9}{'cost':>10}")
+    print(f"  {'model':<26}{'req':>6}{'in':>9}{'read':>9}{'write':>9}{'out':>9}{'cost':>10}{'share':>8}{'hit%':>7}")
     for model, m in sorted(per_model.items(), key=lambda kv: -kv[1]["cost"]):
         cost_str = "${:,.2f}".format(m["cost"])
+        p = portfolio[model]
         print(f"  {model[:25]:<26}{m['requests']:>6}"
               f"{fmt_tokens(m['input']):>9}{fmt_tokens(m['cache_read']):>9}"
               f"{fmt_tokens(m['cache_write']):>9}{fmt_tokens(m['output']):>9}"
-              f"{cost_str:>10}")
+              f"{cost_str:>10}{p['cost_share']:>8.0%}{p['cache_hit_rate']:>7.0%}")
 
     # ── By project ──
     proj = defaultdict(lambda: {"cost": 0.0, "sessions": 0, "prompts": 0, "output": 0})

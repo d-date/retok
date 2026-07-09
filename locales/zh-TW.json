@@ -32,6 +32,8 @@
   "adv_interrupt_detail": "頻繁中斷代表工作正偏離你的意圖。在第一則提示中寫明範圍、不做的事與完成標準，對不確定的任務使用 Plan Mode 先確認計畫，可以減少重工消耗的token。",
   "adv_model_mix_title": "在高價模型上有 {count} 個小型工作階段 (${cost})",
   "adv_model_mix_detail": "一問一答與簡單確認通常用 Haiku/Sonnet 就足夠。用 /model 切換，或為輕量任務準備獨立的設定檔，可以節省開銷。",
+  "adv_premium_share_title": "{model} 佔總成本的 {share} (${cost})",
+  "adv_premium_share_detail": "幾乎所有支出都集中在單一高價位模型上。將調查、機械式修改、單次確認等輕量任務委派給較便宜的模型(例如 Sonnet 或 Haiku 子代理)，把高價位模型留給真正需要它的任務。",
   "adv_ok_title": "未偵測到明顯的低效",
   "adv_ok_detail": "快取命中率、上下文大小與工具使用分布都很健康。請維持目前的使用方式。"
 }

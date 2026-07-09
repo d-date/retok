@@ -32,6 +32,8 @@
   "adv_interrupt_detail": "频繁中断说明工作正偏离你的意图。在第一条提示中写明范围、不做的事和完成标准，对不确定的任务使用 Plan Mode 先确认计划，可以减少返工消耗的token。",
   "adv_model_mix_title": "在高价模型上有 {count} 个小型会话 (${cost})",
   "adv_model_mix_detail": "一问一答和简单确认通常用 Haiku/Sonnet 就足够。用 /model 切换，或为轻量任务准备单独的配置，可以节省开销。",
+  "adv_premium_share_title": "{model} 占总成本的 {share} (${cost})",
+  "adv_premium_share_detail": "几乎所有支出都集中在单一高价位模型上。将调研、机械式修改、一次性检查等轻量任务委派给更便宜的模型(例如 Sonnet 或 Haiku 子代理)，把高价位模型留给真正需要它的任务。",
   "adv_ok_title": "未检测到明显的低效",
   "adv_ok_detail": "缓存命中率、上下文大小和工具使用分布都很健康。请保持当前的使用方式。"
 }

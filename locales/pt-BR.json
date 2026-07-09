@@ -32,6 +32,8 @@
   "adv_interrupt_detail": "Interrupções frequentes indicam que o trabalho está se desviando da sua intenção. Inclua o escopo, o que não fazer e os critérios de conclusão no primeiro prompt, e use o Plan Mode para tarefas incertas.",
   "adv_model_mix_title": "{count} sessões pequenas em modelos premium (${cost})",
   "adv_model_mix_detail": "Perguntas pontuais e verificações rápidas costumam funcionar bem no Haiku ou Sonnet. Troque com /model ou mantenha um perfil separado para tarefas leves.",
+  "adv_premium_share_title": "{model} representa {share} do custo total (${cost})",
+  "adv_premium_share_detail": "Quase todo o gasto passa por um único modelo de nível premium. Delegue trabalho leve — pesquisa, edições mecânicas, verificações pontuais — para um modelo mais barato (ex.: subagentes Sonnet ou Haiku) e reserve o nível premium para tarefas que realmente precisam dele.",
   "adv_ok_title": "Nenhuma ineficiência relevante detectada",
   "adv_ok_detail": "A taxa de acerto do cache, o tamanho dos contextos e a distribuição do uso de ferramentas estão saudáveis. Continue assim."
 }
