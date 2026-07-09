@@ -17,6 +17,7 @@
   "cost_per_prompt": "Kosten pro Prompt",
   "subagent_cost": "Anteil der Subagenten",
   "no_transcripts": "Im gewählten Zeitraum wurden keine Transkripte gefunden.",
+  "unknown_model_warning": "⚠ Unbekannte Modellpreise (Kosten als $0 gezählt): {model} ({count} Einträge)",
   "adv_cache_hit_title": "Cache-Trefferquote ist niedrig ({rate})",
   "adv_cache_hit_detail": "Cache-Lesezugriffe kosten ein Zehntel der normalen Eingabe. Die häufigste Ursache einer niedrigen Trefferquote sind Antwortpausen, die länger als die Cache-TTL sind. Bündeln Sie Ihre Anweisungen in einer einzigen Nachricht, statt sie häppchenweise zu schicken — die Trefferquote steigt.",
   "adv_ttl_title": "Erneutes Caching nach TTL-Ablauf: ~{mtok}M Tokens (${cost})",

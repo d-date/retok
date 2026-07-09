@@ -17,6 +17,7 @@
   "cost_per_prompt": "プロンプトあたりコスト",
   "subagent_cost": "サブエージェント分コスト",
   "no_transcripts": "対象期間にトランスクリプトが見つかりませんでした。",
+  "unknown_model_warning": "⚠ 価格情報がないモデル（コストは $0 として集計）: {model} ({count} 件)",
   "adv_cache_hit_title": "キャッシュヒット率が低め ({rate})",
   "adv_cache_hit_detail": "キャッシュ読み取りは通常入力の1/10のコストです。ヒット率が低い主因は、応答間隔がキャッシュTTLを超えることです。指示を小出しにせず、やることをまとめて1メッセージで指示するとヒット率が上がります。",
   "adv_ttl_title": "キャッシュTTL失効による再キャッシュ: 約 {mtok}M tokens (${cost})",

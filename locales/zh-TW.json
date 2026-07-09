@@ -17,6 +17,7 @@
   "cost_per_prompt": "每則提示成本",
   "subagent_cost": "子代理佔比",
   "no_transcripts": "在所選期間內找不到任何工作階段記錄。",
+  "unknown_model_warning": "⚠ 未知模型定價（費用以 $0 計算）: {model} ({count} 筆記錄)",
   "adv_cache_hit_title": "快取命中率偏低 ({rate})",
   "adv_cache_hit_detail": "快取讀取的成本僅為一般輸入的十分之一。命中率低的主因是回應間隔超過快取TTL。與其零散地下指令，不如把要做的事整理成一則訊息一次說清楚，命中率就會提高。",
   "adv_ttl_title": "快取TTL過期導致的重新快取: 約 {mtok}M tokens (${cost})",

@@ -17,6 +17,7 @@
   "cost_per_prompt": "每条提示成本",
   "subagent_cost": "子代理占比",
   "no_transcripts": "在所选时间段内未找到任何会话记录。",
+  "unknown_model_warning": "⚠ 未知模型定价（费用按 $0 计算）: {model} ({count} 条记录)",
   "adv_cache_hit_title": "缓存命中率偏低 ({rate})",
   "adv_cache_hit_detail": "缓存读取的成本仅为常规输入的十分之一。命中率低的主要原因是响应间隔超过缓存TTL。与其零散地下达指令，不如把要做的事整理成一条消息一次说清，命中率会随之提高。",
   "adv_ttl_title": "缓存TTL过期导致的重新缓存: 约 {mtok}M tokens (${cost})",

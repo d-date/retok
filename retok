@@ -81,6 +81,8 @@ EN = {
     "cost_per_prompt": "Cost per prompt",
     "subagent_cost": "Subagent share",
     "no_transcripts": "No transcripts found in the selected period.",
+    "unknown_model_warning":
+        "⚠ Unknown model pricing (cost counted as $0): {model} ({count} entries)",
 
     "adv_cache_hit_title": "Cache hit rate is low ({rate})",
     "adv_cache_hit_detail":
@@ -332,6 +334,7 @@ def scan(dirs, codex_dirs, since, project_filter, provider_filter):
     per_model = defaultdict(lambda: {"cost": 0.0, "input": 0, "output": 0,
                                      "cache_read": 0, "cache_write": 0,
                                      "requests": 0})
+    unknown_models = defaultdict(int)  # model_id -> entry count (no pricing match)
     files_scanned = 0
 
     # Main transcripts: <project>/<session>.jsonl
@@ -434,6 +437,8 @@ def scan(dirs, codex_dirs, since, project_filter, provider_filter):
                 read = usage.get("cache_read_input_tokens", 0) or 0
                 write = usage.get("cache_creation_input_tokens", 0) or 0
                 cost = entry_cost(model, usage)
+                if model and model_family(model) is None:
+                    unknown_models[model] += 1
                 context = inp + read + write
 
                 s["requests"] += 1
@@ -481,17 +486,17 @@ def scan(dirs, codex_dirs, since, project_filter, provider_filter):
 
     if provider_filter != "claude":
         files_scanned += scan_codex(codex_dirs, since, sessions, seen_msg_ids,
-                                    daily, per_model)
+                                    daily, per_model, unknown_models)
 
     if project_filter:
         sessions = {k: v for k, v in sessions.items()
                     if v["project"] and project_filter.lower() in v["project"].lower()}
     # Drop sessions with no API traffic
     sessions = {k: v for k, v in sessions.items() if v["requests"] > 0}
-    return sessions, daily, per_model, files_scanned
+    return sessions, daily, per_model, unknown_models, files_scanned
 
 
-def scan_codex(codex_dirs, since, sessions, seen_ids, daily, per_model):
+def scan_codex(codex_dirs, since, sessions, seen_ids, daily, per_model, unknown_models):
     """Scan OpenAI Codex CLI rollout files (~/.codex/sessions/YYYY/MM/DD/)."""
     files_scanned = 0
     since_epoch = since.timestamp()
@@ -582,6 +587,8 @@ def scan_codex(codex_dirs, since, sessions, seen_ids, daily, per_model):
 
                     mdl = model or "gpt-5"
                     cost = codex_cost(mdl, inp_total, cached, out)
+                    if openai_price(mdl) is None:
+                        unknown_models[mdl] += 1
                     s["requests"] += 1
                     s["input"] += inp_total - cached
                     s["cache_read"] += cached
@@ -687,7 +694,7 @@ def fmt_tokens(n):
     return str(n)
 
 
-def render(sessions, daily, per_model, files_scanned, args, lang, msgs, use_color):
+def render(sessions, daily, per_model, unknown_models, files_scanned, args, lang, msgs, use_color):
     def c(text, *names):
         return color(text, *names, enabled=use_color)
 
@@ -713,6 +720,7 @@ def render(sessions, daily, per_model, files_scanned, args, lang, msgs, use_colo
             "totals": totals,
             "cache_hit_rate": hit_rate,
             "per_model": {k: dict(v) for k, v in per_model.items()},
+            "unknown_models": dict(unknown_models),
             "daily": dict(sorted(daily.items())),
             "advice": [
                 {"severity": sev, "key": key, "params": params,
@@ -823,6 +831,12 @@ def render(sessions, daily, per_model, files_scanned, args, lang, msgs, use_colo
         print(f"\n  {c(mark + ' ' + t(key + '_title', **params), 'bold', col)}")
         for line in wrap_text(t(key + "_detail", **params), lang):
             print(f"    {line}")
+
+    # ── Unknown model pricing (cost silently undercounted as $0) ──
+    if unknown_models:
+        print()
+        for model, count in sorted(unknown_models.items(), key=lambda kv: -kv[1]):
+            print(c(t("unknown_model_warning", model=model, count=count), "yellow"))
     print()
 
 
@@ -862,13 +876,13 @@ def main():
     msgs = load_messages(lang)
 
     since = datetime.now(timezone.utc) - timedelta(days=args.days)
-    sessions, daily, per_model, files_scanned = scan(
+    sessions, daily, per_model, unknown_models, files_scanned = scan(
         args.dirs, args.codex_dirs, since, args.project, args.provider)
     if not sessions:
         print(msgs.get("no_transcripts", EN["no_transcripts"]), file=sys.stderr)
         sys.exit(1)
     use_color = sys.stdout.isatty() and not args.json
-    render(sessions, daily, per_model, files_scanned, args, lang, msgs, use_color)
+    render(sessions, daily, per_model, unknown_models, files_scanned, args, lang, msgs, use_color)
 
 
 if __name__ == "__main__":

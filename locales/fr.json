@@ -17,6 +17,7 @@
   "cost_per_prompt": "Coût par prompt",
   "subagent_cost": "Part des sous-agents",
   "no_transcripts": "Aucune transcription trouvée sur la période sélectionnée.",
+  "unknown_model_warning": "⚠ Tarification du modèle inconnue (coût compté comme 0 $) : {model} ({count} entrées)",
   "adv_cache_hit_title": "Taux de succès du cache faible ({rate})",
   "adv_cache_hit_detail": "Une lecture de cache coûte un dixième d'une entrée normale. La cause habituelle d'un taux faible : des pauses entre réponses dépassant le TTL du cache. Regroupez vos instructions en un seul message plutôt que de les envoyer au compte-gouttes, et le taux remontera.",
   "adv_ttl_title": "Re-mise en cache après expiration du TTL : ~{mtok}M tokens (${cost})",
